@@ -13,8 +13,6 @@ class Caesar:
 
     def encode(self, input_text: str, key_1: Union[int, str],
                type_work: int = 1) -> str:
-        global lower
-        global upper
         try:
             key = int(key_1)
         except TypeError:
@@ -48,8 +46,6 @@ class Vigenere:
         """Шифп Винжера"""
         index = 0
         index_len = len(key)
-        global lower
-        global upper
         new = ''
         quantity = 26
         test = set(lower) | set(upper)
@@ -140,8 +136,7 @@ class Hacker:
         except FileNotFoundError:
             print(model_file, "doesn't exist")
             sys.exit()
-        else:
-            f.close()
+
         gist = self.learn(input_text, None, mod=False)
         for chenger in range(quantity):
             sum_gis: float = 0
@@ -162,84 +157,104 @@ class Hacker:
         return caes.decode(input_text, my_index)
 
 
+def cipher(name: str) -> Union[Caesar, Vigenere, Vernam]:
+    if name == 'caesar':
+        return Caesar()
+    elif name == 'vigenere':
+        return Vigenere()
+    elif name == 'vernam':
+        return Vernam()
+    else:
+        print("")
+        sys.exit()
+
+
 def read(file: Optional[str]) -> str:
     if file is None:
         return str(input())
+
     else:
-        with open(file, 'r') as opened_file:
-            return opened_file.read()
+        try:
+            with open(file, 'r') as opened_file:
+                return opened_file.read()
+        except FileNotFoundError:
+            print(file, "Doesn't exist")
+            sys.exit()
 
 
 def write(file: Optional[str], text: str) -> None:
     if file is None:
         print(text)
     else:
-        with open(file, 'w') as opened_file:
-            opened_file.write(text)
+        try:
+            with open(file, 'w') as opened_file:
+                opened_file.write(text)
+        except FileNotFoundError:
+            print(file, "Doesn't exist")
+            sys.exit()
 
 
-def analyze(objective: str, text: str, cipher: str = None,
-            key: str = '', output: str = '', model: str = '') -> None:
-    if objective == 'encode':
-        if cipher == 'caesar':
-            obj = Caesar()
-            write(output, obj.encode(text, key))
-        elif cipher == 'vigenere':
-            obj1 = Vigenere()
-            write(output, obj1.encode(text, key))
+def analyze(args: argparse.Namespace) -> None:
+    if args.program_objective == 'encode':
+        obj = cipher(args.cipher)
+        write(args.output_file, obj.encode(read(args.input_file), args.key))
 
-        elif cipher == 'vernam':
-            obj2 = Vernam()
-            write(output, obj2.encode(text, key))
-    elif objective == 'decode':
-        if cipher == 'caesar':
-            obj3 = Caesar()
-            write(output, obj3.decode(text, key))
-        elif cipher == 'vigenere':
-            obj4 = Vigenere()
-            write(output, obj4.decode(text, key))
-        elif cipher == 'vernam':
-            obj5 = Vernam()
-            write(output, obj5.decode(text, key))
-    elif objective == 'train':
-        obj6 = Hacker()
-        obj6.learn(text, model)
+    elif args.program_objective == 'decode':
+        obj2 = cipher(args.cipher)
+        write(args.output_file, obj2.decode(read(args.input_file), args.key))
 
-    elif objective == 'hack':
-        obj7 = Hacker()
-        write(output, obj7.hack(text, str(model)))
+    elif args.program_objective == 'train':
+        obj3 = Hacker()
+        obj3.learn(read(args.text_file), args.text_file)
+
+    elif args.program_objective == 'hack':
+        obj4 = Hacker()
+        write(args.output_file,
+              obj4.hack(read(args.input_file), str(args.model_file)))
     else:
         print("This command not found.")
 
 
-def main():
+def arg_parser() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="User database utility")
-    parser.add_argument('program_objective',
-                        type=str,
-                        help="What the program should do")
-    parser.add_argument('--cipher',
-                        type=str,
-                        help='Encryption type')
-    parser.add_argument('--key',
-                        type=str,
-                        help='Encryption key')
-    parser.add_argument('--input-file',
-                        type=str,
-                        help='Input file')
-    parser.add_argument('--output-file',
-                        type=str,
-                        help='Output file')
-    parser.add_argument('--model-file',
-                        type=str,
-                        help='Model file')
+    subparsers = parser.add_subparsers()
+
+    parser_encode = subparsers.add_parser("encode", help="Encode")
+    parser_encode.set_defaults(program_objective='encode')
+
+    parser_encode.add_argument('--cipher', help='Encryption type')
+    parser_encode.add_argument('--key', help='Encryption key')
+    parser_encode.add_argument('--input-file', help='Input file')
+    parser_encode.add_argument('--output-file', help='Output file')
+
+    parser_decode = subparsers.add_parser("decode", help="Decode")
+    parser_decode.set_defaults(program_objective="decode")
+
+    parser_decode.add_argument('--cipher', help='Encryption type')
+    parser_decode.add_argument('--key', help='Encryption key')
+    parser_decode.add_argument('--input-file', help='Input file')
+    parser_decode.add_argument('--output-file', help='Output file')
+
+    parser_train = subparsers.add_parser("train", help="Train")
+    parser_train.set_defaults(program_objective='train')
+
+    parser_train.add_argument('--text-file', help='Text file')
+    parser_train.add_argument('--model-file', help='Model file')
+
+    parser_hack = subparsers.add_parser("hack", help="Hack")
+    parser_hack.set_defaults(program_objective="hack")
+
+    parser_hack.add_argument('--input-file', help='Input file')
+    parser_hack.add_argument('--output-file', help='Output file')
+    parser_hack.add_argument('--model-file', help='Model file')
+
     args = parser.parse_args()
-    text: str = read(args.input_file)
-    objective: str = args.program_objective
-    cipher: str = args.cipher
-    key: str = args.key
-    out: str = args.output_file
-    model: str = args.model_file
-    analyze(objective, text, cipher=cipher, key=key, output=out, model=model)
+
+    return args
+
+
+def main():
+    analyze(arg_parser())
 
 
 if __name__ == '__main__':

@@ -165,7 +165,7 @@ def cipher(name: str) -> Union[Caesar, Vigenere, Vernam]:
     elif name == 'vernam':
         return Vernam()
     else:
-        print("")
+        print("This cipher not found.")
         sys.exit()
 
 
